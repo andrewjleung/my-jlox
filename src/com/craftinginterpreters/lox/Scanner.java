@@ -111,6 +111,7 @@ public class Scanner {
                 addToken(match('=') ? TokenType.GREATER_EQUAL : TokenType.GREATER);
                 break;
             case '/':
+                // TODO: add support for C-style block comments `/* ...*/`
                 if (match('/')) {
                     // A comment goes until the end of the line (the newline character).
                     // Keep advancing the current offset until reaching the newline.
