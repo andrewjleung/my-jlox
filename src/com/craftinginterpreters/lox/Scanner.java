@@ -5,8 +5,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.craftinginterpreters.lox.TokenType;
-
 public class Scanner {
     /**
      * A map from reserved keywords to their TokenType.
