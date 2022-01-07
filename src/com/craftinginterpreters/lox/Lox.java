@@ -91,11 +91,17 @@ public class Lox {
         // Use the scanner to lex the source code into tokens.
         List<Token> tokens = scanner.scanTokens();
 
-        // For now, just print the tokens.
-        for (Token token : tokens) {
-            System.out.println(token);
-        }
+        // Parse the tokens.
+        Parser parser = new Parser(tokens);
+        Expr expression = parser.parse();
+
+        // Stop if there was a syntax error.
+        if (hadError) return;
+
+        // Print the syntax tree.
+        System.out.println(new AstPrinter().print(expression));
     }
+
 
     /**
      * Report an error at the given line with the given message.
@@ -131,4 +137,17 @@ public class Lox {
         hadError = true;
     }
 
+    /**
+     * Report a parsing error at the given token with the given message.
+     *
+     * @param token the token where the error occurred
+     * @param message the error message
+     */
+    static void error(Token token, String message) {
+        if (token.type == TokenType.EOF) {
+            report(token.line, " at end", message);
+        } else {
+            report(token.line, " at '" + token.lexeme + "'", message);
+        }
+    }
 }
