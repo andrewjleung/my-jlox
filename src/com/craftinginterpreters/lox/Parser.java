@@ -1,5 +1,6 @@
 package com.craftinginterpreters.lox;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static com.craftinginterpreters.lox.TokenType.*;
@@ -50,17 +51,20 @@ class Parser {
     }
 
     /**
-     * Begin parsing this Parser's list of tokens.
+     * Parse and collect statement ASTs from this Parser's list of tokens.
      *
-     * @return the syntax tree in the case of no syntax errors, null if there
-     * are syntax errors
+     * @return the list of parsed statement ASTs
      */
-    Expr parse() {
-        try {
-            return expression();
-        } catch (ParseError error) {
-            return null;
+    List<Stmt> parse() {
+        List<Stmt> statements = new ArrayList<>();
+
+        // Until the end of the list of tokens (the EOF token),
+        // keep parsing and collecting statement ASTs.
+        while (!isAtEnd()) {
+            statements.add(statement());
         }
+
+        return statements;
     }
 
     /**
@@ -72,6 +76,51 @@ class Parser {
     private Expr expression() {
         return equality();
     }
+
+    /**
+     * Parse a single statement AST from the current position in this
+     * Parser's list of tokens.
+     *
+     * @return the parsed statement AST
+     */
+    private Stmt statement() {
+        if (match(PRINT)) return printStatement();
+
+        return expressionStatement();
+    }
+
+    /**
+     * Parse a single print statement AST from the current position in this
+     * Parser's list of tokens.
+     *
+     * @return the parsed print statement AST
+     */
+    private Stmt printStatement() {
+        // Parse the expression.
+        // The `print` keyword has already been consumed in order to
+        // know that the following statement is a print statement.
+        Expr value = expression();
+
+        // Consume the final semicolon of the statement.
+        consume(SEMICOLON, "Expect ';' after value.");
+        return new Stmt.Print(value);
+    }
+
+    /**
+     * Parse a single expression statement AST from the current position in
+     * this Parser's list of tokens.
+     *
+     * @return the parsed expression statement AST
+     */
+    private Stmt expressionStatement() {
+        // Parse the expression.
+        Expr expr = expression();
+
+        // Consume the final semicolon of the statement.
+        consume(SEMICOLON, "Expect ';' after expression.");
+        return new Stmt.Expression(expr);
+    }
+
 
     /**
      * Match an equality expression starting from the current token in the
