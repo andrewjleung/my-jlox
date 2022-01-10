@@ -10,9 +10,21 @@ import java.util.List;
 
 public class Lox {
     /**
+     * The Lox interpreter.
+     * This is static so that a single REPL session can reuse it and
+     * store global variables.
+     */
+    private static final Interpreter interpreter = new Interpreter();
+
+    /**
      * Flag used to ensure code with known errors is not executed.
      */
     static boolean hadError = false;
+
+    /**
+     * Flag used to reflect that a runtime error occurred.
+     */
+    static boolean hadRuntimeError = false;
 
     public static void main(String[] args) throws IOException {
         if (args.length > 1) {
@@ -50,6 +62,7 @@ public class Lox {
 
         // Indicate an error in the exit code.
         if (hadError) System.exit(65);
+        if (hadRuntimeError) System.exit(70);
     }
 
     /**
@@ -98,8 +111,8 @@ public class Lox {
         // Stop if there was a syntax error.
         if (hadError) return;
 
-        // Print the syntax tree.
-        System.out.println(new AstPrinter().print(expression));
+        // Interpret the expression syntax tree.
+        interpreter.interpret(expression);
     }
 
 
@@ -149,5 +162,16 @@ public class Lox {
         } else {
             report(token.line, " at '" + token.lexeme + "'", message);
         }
+    }
+
+    /**
+     * Report a runtime error.
+     *
+     * @param error the RuntimeError which occurred
+     */
+    static void runtimeError(RuntimeError error) {
+        System.err.println(error.getMessage() +
+                "\n[line " + error.token.line + "]");
+        hadRuntimeError = true;
     }
 }
