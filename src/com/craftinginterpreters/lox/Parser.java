@@ -17,7 +17,9 @@ import static com.craftinginterpreters.lox.TokenType.*;
  * varDecl        → "var" IDENTIFIER ( "=" expression )? ";" ;
  * exprStmt       → expression ";" ;
  * printStmt      → "print" expression ";" ;
- * expression     → equality ;
+ * expression     → assignment ;
+ * assignment     → IDENTIFIER "=" assignment
+ *                | equality ;
  * equality       → comparison ( ( "!=" | "==" ) comparison )* ;
  * comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
  * term           → factor ( ( "-" | "+" ) factor )* ;
@@ -71,7 +73,7 @@ class Parser {
         // Until the end of the list of tokens (the EOF token),
         // keep parsing and collecting statement ASTs.
         while (!isAtEnd()) {
-            statements.add(statement());
+            statements.add(declaration());
         }
 
         return statements;
@@ -84,7 +86,29 @@ class Parser {
      * @return an Expr syntax tree representing the matched expression
      */
     private Expr expression() {
-        return equality();
+        return assignment();
+    }
+
+    /**
+     * Parse a single declaration from the current position in this
+     * Parser's list of tokens.
+     *
+     * @return the parsed declaration
+     */
+    private Stmt declaration() {
+        try {
+            // If the `var` keyword is present, parse a variable declaratio.
+            if (match(VAR)) return varDeclaration();
+
+            // Otherwise, parse a statement.
+            return statement();
+        } catch (ParseError error) {
+            // Initiate error recovery.
+            // Now that the stack is unwound, synchronize tokens to the
+            // next statement and continue parsing.
+            synchronize();
+            return null;
+        }
     }
 
     /**
@@ -117,6 +141,27 @@ class Parser {
     }
 
     /**
+     * Parse a single variable declaration statement AST from the current
+     * position in this Parser's list of tokens.
+     *
+     * @return the parsed variable declaration statement AST
+     */
+    private Stmt varDeclaration() {
+        // Consume the variable's name.
+        Token name = consume(IDENTIFIER, "Expect variable name.");
+
+        // Set the variable's initializer if present.
+        Expr initializer = null;
+        if (match(EQUAL)) {
+            initializer = expression();
+        }
+
+        // Consume the final semicolon.
+        consume(SEMICOLON, "Expect ';' after variable declaration.");
+        return new Stmt.Var(name, initializer);
+    }
+
+    /**
      * Parse a single expression statement AST from the current position in
      * this Parser's list of tokens.
      *
@@ -131,6 +176,49 @@ class Parser {
         return new Stmt.Expression(expr);
     }
 
+    /**
+     * Parse a single assignment expression AST from the current position
+     * in this Parser's list of tokens.
+     *
+     * @return the parsed assignment expression AST
+     */
+    private Expr assignment() {
+        // Parse the left side of the assignment.
+        // Note that the equality production is actually a strict superset
+        // of the set of valid l-values for assignment.
+        // Because of this, if we confirm that this is an assignment,
+        // we need to later validate that this expression is actually a
+        // valid assignment target i.e. a Variable expression.
+        Expr expr = equality();
+
+        // If an equals sign is found, then this must be assignment.
+        // Effectively, we must convert the found r-value expression into an l-value.
+        // Recursively parse the right side as an assignment (right-associative).
+        // As previously mentioned, the left side must then be validated.
+        if (match(EQUAL)) {
+            // Get the equals token.
+            Token equals = previous();
+
+            // Recursively parse the right side as an assignment.
+            Expr value = assignment();
+
+            // Validate that the left is a valid assignment target.
+            // If so, produce the Assign syntax tree.
+            if (expr instanceof Expr.Variable) {
+                Token name = ((Expr.Variable)expr).name;
+                return new Expr.Assign(name, value);
+            }
+
+            // Report an error since an assignment was found without a valid
+            // assignment target.
+            // This does not throw because the interpreter isn't confused.
+            // It still knows the general structure of the code and doesn't
+            // need to panic and synchronize.
+            error(equals, "Invalid assignment target.");
+        }
+
+        return expr;
+    }
 
     /**
      * Match an equality expression starting from the current token in the
@@ -171,6 +259,7 @@ class Parser {
     private Expr comparison() {
         Expr expr = term();
 
+        // This works the same as equality.
         while (match(GREATER, GREATER_EQUAL, LESS, LESS_EQUAL)) {
             Token operator = previous();
             Expr right = term();
@@ -189,6 +278,7 @@ class Parser {
     private Expr term() {
         Expr expr = factor();
 
+        // This works the same as equality.
         while (match(MINUS, PLUS)) {
             Token operator = previous();
             Expr right = factor();
@@ -207,6 +297,7 @@ class Parser {
     private Expr factor() {
         Expr expr = unary();
 
+        // This works the same as equality.
         while (match(SLASH, STAR)) {
             Token operator = previous();
             Expr right = unary();
@@ -248,6 +339,10 @@ class Parser {
 
         if (match(NUMBER, STRING)) {
             return new Expr.Literal(previous().literal);
+        }
+
+        if (match(IDENTIFIER)) {
+            return new Expr.Variable(previous());
         }
 
         if (match(LEFT_PAREN)) {

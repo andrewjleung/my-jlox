@@ -19,6 +19,7 @@ public class GenerateAst {
         // Define the AST for expressions within the Expr.java file with the given types.
         // These types are formatted as "<name> : <field1-type> <field1-name> ...
         defineAst(outputDir, "Expr", Arrays.asList(
+                "Assign   : Token name, Expr value",
                 "Binary   : Expr left, Token operator, Expr right",
                 "Grouping : Expr expression",
                 "Literal  : Object value",
