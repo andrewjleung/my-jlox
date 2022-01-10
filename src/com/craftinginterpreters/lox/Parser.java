@@ -9,11 +9,12 @@ import static com.craftinginterpreters.lox.TokenType.*;
  * Class for parsing tokens into an Expr syntax tree.
  *
  * This abides by the following grammar:
- * program        → statement* EOF ;
- *
+ * program        → declaration* EOF ;
+ * declaration    → varDecl
+ *                | statement ;
  * statement      → exprStmt
  *                | printStmt ;
- *
+ * varDecl        → "var" IDENTIFIER ( "=" expression )? ";" ;
  * exprStmt       → expression ";" ;
  * printStmt      → "print" expression ";" ;
  * expression     → equality ;
@@ -23,8 +24,10 @@ import static com.craftinginterpreters.lox.TokenType.*;
  * factor         → unary ( ( "/" | "*" ) unary )* ;
  * unary          → ( "!" | "-" ) unary
  *                | primary ;
- * primary        → NUMBER | STRING | "true" | "false" | "nil"
- *                | "(" expression ")" ;
+ * primary        → "true" | "false" | "nil"
+ *                | NUMBER | STRING
+ *                | "(" expression ")"
+ *                | IDENTIFIER ;
  *
  * TODO: add support for C-like comma expressions (add to the grammar and implement)
  * TODO: add support for the C-style conditional / ternary operator ?:
