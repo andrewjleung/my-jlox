@@ -16,13 +16,19 @@ public class GenerateAst {
 
         String outputDir = args[0];
 
-        // Define the AST within the Expr.java file with the given types.
+        // Define the AST for expressions within the Expr.java file with the given types.
         // These types are formatted as "<name> : <field1-type> <field1-name> ...
         defineAst(outputDir, "Expr", Arrays.asList(
                 "Binary   : Expr left, Token operator, Expr right",
                 "Grouping : Expr expression",
                 "Literal  : Object value",
                 "Unary    : Token operator, Expr right"
+        ));
+
+        // Define the AST for statements within the Stmt.java file with the given types.
+        defineAst(outputDir, "Stmt", Arrays.asList(
+                "Expression : Expr expression",
+                "Print      : Expr expression"
         ));
     }
 
