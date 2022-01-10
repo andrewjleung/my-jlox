@@ -17,6 +17,13 @@ import static com.craftinginterpreters.lox.TokenType.*;
  *                | primary ;
  * primary        → NUMBER | STRING | "true" | "false" | "nil"
  *                | "(" expression ")" ;
+ *
+ * TODO: add support for C-like comma expressions (add to the grammar and implement)
+ * TODO: add support for the C-style conditional / ternary operator ?:
+ * TODO: add error productions to handle binary operators without a left operand,
+ *       this should report the error and parse / discard the right operand with
+ *       the appropriate precedence
+ *
  */
 class Parser {
     /**

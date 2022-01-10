@@ -56,6 +56,8 @@ class AstPrinter implements Expr.Visitor<String> {
         return builder.toString();
     }
 
+//    Printer testing.
+//
 //    public static void main(String[] args) {
 //        Expr expression = new Expr.Binary(
 //                new Expr.Unary(
