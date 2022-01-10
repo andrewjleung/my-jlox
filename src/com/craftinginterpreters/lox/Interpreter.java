@@ -139,7 +139,7 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     @Override
     public Object visitGroupingExpr(Expr.Grouping expr) {
         // Simply evaluate the nested expression.
-        return evaluate(expr);
+        return evaluate(expr.expression);
     }
 
     @Override
