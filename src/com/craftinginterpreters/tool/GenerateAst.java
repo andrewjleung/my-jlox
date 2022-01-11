@@ -29,6 +29,7 @@ public class GenerateAst {
 
         // Define the AST for statements within the Stmt.java file with the given types.
         defineAst(outputDir, "Stmt", Arrays.asList(
+                "Block      : List<Stmt> statements",
                 "Expression : Expr expression",
                 "Print      : Expr expression",
                 "Var        : Token name, Expr initializer"

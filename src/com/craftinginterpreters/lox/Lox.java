@@ -95,6 +95,8 @@ public class Lox {
     /**
      * Execute a given string of source code.
      *
+     * TODO: restore the ability to enter a single expression and evaluate it
+     *
      * @param source the string of source code
      */
     private static void run(String source) {

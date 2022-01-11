@@ -43,6 +43,44 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         stmt.accept(this);
     }
 
+    /**
+     * Execute the given block of statements using the given Environment
+     * as this block's environment.
+     *
+     * TODO: refactor the use of environments to not mutate an environment field
+     *       but instead explicitly pass the environment as a parameter to each
+     *       visit method, passing a different method when necessary.
+     *
+     * @param statements the statements within the block
+     * @param environment the block's environment
+     */
+    void executeBlock(List<Stmt> statements,
+                      Environment environment) {
+        // Save a reference to the outer environment to return to after
+        // exiting the block.
+        Environment previous = this.environment;
+
+        try {
+            // Point this Interpreter to the block's environment.
+            this.environment = environment;
+
+            // Execute each statement within the block.
+            for (Stmt statement : statements) {
+                execute(statement);
+            }
+        } finally {
+            // Unwind to the outer environment now that the block is
+            // done executing.
+            this.environment = previous;
+        }
+    }
+
+    @Override
+    public Void visitBlockStmt(Stmt.Block stmt) {
+        executeBlock(stmt.statements, new Environment(environment));
+        return null;
+    }
+
     @Override
     public Void visitExpressionStmt(Stmt.Expression stmt) {
         evaluate(stmt.expression);
@@ -174,6 +212,7 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 
     @Override
     public Object visitVariableExpr(Expr.Variable expr) {
+        // TODO: make it a runtime error to access an unassigned (nil) variable.
         return environment.get(expr.name);
     }
 

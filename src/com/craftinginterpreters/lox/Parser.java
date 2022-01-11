@@ -10,13 +10,18 @@ import static com.craftinginterpreters.lox.TokenType.*;
  *
  * This abides by the following grammar:
  * program        → declaration* EOF ;
+ *
  * declaration    → varDecl
  *                | statement ;
- * statement      → exprStmt
- *                | printStmt ;
  * varDecl        → "var" IDENTIFIER ( "=" expression )? ";" ;
+ *
+ * statement      → exprStmt
+ *                | printStmt
+ *                | block ;
+ * block          → "{" declaration* "}" ;
  * exprStmt       → expression ";" ;
  * printStmt      → "print" expression ";" ;
+ *
  * expression     → assignment ;
  * assignment     → IDENTIFIER "=" assignment
  *                | equality ;
@@ -119,6 +124,7 @@ class Parser {
      */
     private Stmt statement() {
         if (match(PRINT)) return printStatement();
+        if (match(LEFT_BRACE)) return new Stmt.Block(block());
 
         return expressionStatement();
     }
@@ -174,6 +180,25 @@ class Parser {
         // Consume the final semicolon of the statement.
         consume(SEMICOLON, "Expect ';' after expression.");
         return new Stmt.Expression(expr);
+    }
+
+    /**
+     * Parse a list of statements from a block starting from the current
+     * position in this Parser's list of tokens.
+     *
+     * @return the list of Stmts within the block
+     */
+    private List<Stmt> block() {
+        List<Stmt> statements = new ArrayList<>();
+
+        // Consume statements until the end of the block / file.
+        while (!check(RIGHT_BRACE) && !isAtEnd()) {
+            statements.add(declaration());
+        }
+
+        // Consume the closing curly brace of the block.
+        consume(RIGHT_BRACE, "Expect '}' after block.");
+        return statements;
     }
 
     /**
