@@ -16,15 +16,20 @@ import static com.craftinginterpreters.lox.TokenType.*;
  * varDecl        → "var" IDENTIFIER ( "=" expression )? ";" ;
  *
  * statement      → exprStmt
+ *                | ifStmt
  *                | printStmt
  *                | block ;
- * block          → "{" declaration* "}" ;
  * exprStmt       → expression ";" ;
+ * ifStmt         → "if" "(" expression ")" statement
+ *                ( "else" statement )? ;
  * printStmt      → "print" expression ";" ;
+ * block          → "{" declaration* "}" ;
  *
  * expression     → assignment ;
  * assignment     → IDENTIFIER "=" assignment
- *                | equality ;
+ *                | logic_or ;
+ * logic_or       → logic_and ( "or" logic_and )* ;
+ * logic_and      → equality ( "and" equality )* ;
  * equality       → comparison ( ( "!=" | "==" ) comparison )* ;
  * comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
  * term           → factor ( ( "-" | "+" ) factor )* ;
@@ -123,10 +128,35 @@ class Parser {
      * @return the parsed statement AST
      */
     private Stmt statement() {
+        if (match(IF)) return ifStatement();
         if (match(PRINT)) return printStatement();
         if (match(LEFT_BRACE)) return new Stmt.Block(block());
 
         return expressionStatement();
+    }
+
+    /**
+     *
+     * @return
+     */
+    private Stmt ifStatement() {
+        // Parse the if-condition.
+        // The condition is an expression, which when interpreted will
+        // be coerced into a Boolean via Lox's rules for truthiness / falsiness.
+        consume(LEFT_PAREN, "Expect '(' after 'if'.");
+        Expr condition = expression();
+        consume(RIGHT_PAREN, "Expect ')' after if condition.");
+
+        // Parse the mandatory then-statement.
+        Stmt thenBranch = statement();
+
+        // Parse the optional else-statement.
+        Stmt elseBranch = null;
+        if (match(ELSE)) {
+            elseBranch = statement();
+        }
+
+        return new Stmt.If(condition, thenBranch, elseBranch);
     }
 
     /**
@@ -214,7 +244,7 @@ class Parser {
         // Because of this, if we confirm that this is an assignment,
         // we need to later validate that this expression is actually a
         // valid assignment target i.e. a Variable expression.
-        Expr expr = equality();
+        Expr expr = or();
 
         // If an equals sign is found, then this must be assignment.
         // Effectively, we must convert the found r-value expression into an l-value.
@@ -240,6 +270,48 @@ class Parser {
             // It still knows the general structure of the code and doesn't
             // need to panic and synchronize.
             error(equals, "Invalid assignment target.");
+        }
+
+        return expr;
+    }
+
+    /**
+     * Parse a single logical or expression AST from the current position
+     * in this Parser's list of tokens.
+     *
+     * @return the parsed logical or expression AST
+     */
+    private Expr or() {
+        // Parse the left and expression (or higher precedence).
+        Expr expr = and();
+
+        // If there is an `or` keyword, this is an or expression.
+        // Parse the right and expression (or higher precedence).
+        while (match(OR)) {
+            Token operator = previous();
+            Expr right = and();
+            expr = new Expr.Logical(expr, operator, right);
+        }
+
+        return expr;
+    }
+
+    /**
+     * Parse a single logical and expression AST from the current position
+     * in this Parser's list of tokens.
+     *
+     * @return the parsed logical and expression AST
+     */
+    private Expr and() {
+        // Parse the left equality expression (or higher precedence).
+        Expr expr = equality();
+
+        // If there is an `and` keyword, this is an and expression.
+        // Parse the right equality expression (or higher precedence).
+        while (match(AND)) {
+            Token operator = previous();
+            Expr right = equality();
+            expr = new Expr.Logical(expr, operator, right);
         }
 
         return expr;

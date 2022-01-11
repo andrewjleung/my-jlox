@@ -14,7 +14,7 @@ class AstPrinter implements Expr.Visitor<String> {
     @Override
     public String visitAssignExpr(Expr.Assign expr) {
         // TODO: verify with text.
-        return null;
+        return parenthesize("assign " + expr.name.lexeme, expr.value);
     }
 
     @Override
@@ -32,6 +32,12 @@ class AstPrinter implements Expr.Visitor<String> {
     public String visitLiteralExpr(Expr.Literal expr) {
         if (expr.value == null) return "nil";
         return expr.value.toString();
+    }
+
+    @Override
+    public String visitLogicalExpr(Expr.Logical expr) {
+        // TODO: verify with text.
+        return parenthesize(expr.operator.lexeme, expr.left, expr.right);
     }
 
     @Override

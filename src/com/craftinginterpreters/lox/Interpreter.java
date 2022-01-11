@@ -88,6 +88,16 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     }
 
     @Override
+    public Void visitIfStmt(Stmt.If stmt) {
+        if (isTruthy(evaluate(stmt.condition))) {
+            execute(stmt.thenBranch);
+        } else if (stmt.elseBranch != null) {
+            execute(stmt.elseBranch);
+        }
+        return null;
+    }
+
+    @Override
     public Void visitPrintStmt(Stmt.Print stmt) {
         Object value = evaluate(stmt.expression);
         System.out.println(stringify(value));
@@ -184,6 +194,28 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     public Object visitLiteralExpr(Expr.Literal expr) {
         // A literal contains its value which was determined during scanning.
         return expr.value;
+    }
+
+    @Override
+    public Object visitLogicalExpr(Expr.Logical expr) {
+        // Evaluate the left expression.
+        Object left = evaluate(expr.left);
+
+        // Short circuit depending on the logical operator and the
+        // value of the left expression.
+        if (expr.operator.type == TokenType.OR) {
+            // The operator is `or` and the left expression is truthy.
+            // We don't need to evaluate the right so short circuit.
+            if (isTruthy(left)) return left;
+        } else {
+            // The operator is `and` and the left expression is falsey.
+            // We don't need to evaluate the right so short circuit.
+            if (!isTruthy(left)) return left;
+        }
+
+        // We didn't short circuit.
+        // The entire expression simplifies to whatever the right evaluates to.
+        return evaluate(expr.right);
     }
 
     @Override
