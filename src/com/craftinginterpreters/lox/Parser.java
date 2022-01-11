@@ -1,6 +1,7 @@
 package com.craftinginterpreters.lox;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import static com.craftinginterpreters.lox.TokenType.*;
@@ -16,10 +17,14 @@ import static com.craftinginterpreters.lox.TokenType.*;
  * varDecl        → "var" IDENTIFIER ( "=" expression )? ";" ;
  *
  * statement      → exprStmt
+ *                | forStmt
  *                | ifStmt
  *                | printStmt
  *                | whileStmt
  *                | block ;
+ * forStmt        → "for" "(" ( varDecl | exprStmt | ";" )
+ *                  expression? ";"
+ *                  expression? ")" statement ;
  * whileStmt      → "while" "(" expression ")" statement ;
  * exprStmt       → expression ";" ;
  * ifStmt         → "if" "(" expression ")" statement
@@ -130,12 +135,73 @@ class Parser {
      * @return the parsed statement AST
      */
     private Stmt statement() {
+        if (match(FOR)) return forStatement();
         if (match(IF)) return ifStatement();
         if (match(PRINT)) return printStatement();
         if (match(WHILE)) return whileStatement();
         if (match(LEFT_BRACE)) return new Stmt.Block(block());
 
         return expressionStatement();
+    }
+
+    private Stmt forStatement() {
+        consume(LEFT_PAREN, "Expect '(' after 'for'.");
+
+        // Parse the optional initializer.
+        Stmt initializer;
+        if (match(SEMICOLON)) {
+            // There is no initializer.
+            initializer = null;
+        } else if (match(VAR)) {
+            initializer = varDeclaration();
+        } else {
+            initializer = expressionStatement();
+        }
+
+        // Parse the optional condition.
+        Expr condition = null;
+        if (!check(SEMICOLON)) {
+            // There is a condition. Parse an expression.
+            condition = expression();
+        }
+        consume(SEMICOLON, "Expect ';' after loop condition.");
+
+        // Parse the optional increment.
+        Expr increment = null;
+        if (!check(RIGHT_PAREN)) {
+            // There is an increment, Parse an expression.
+            increment = expression();
+        }
+        consume(RIGHT_PAREN, "Expect ')' after for clauses.");
+
+        // Parse the body.
+        Stmt body = statement();
+
+        // Desugar this for-loop into a while loop.
+        // If there is an increment, modify the body to be a block
+        // containing the original parsed body and the increment expression
+        // at the end.
+        if (increment != null) {
+            body = new Stmt.Block(
+                    Arrays.asList(
+                            body,
+                            new Stmt.Expression(increment)));
+        }
+
+        // If there is no condition, then the desugared while loop should
+        // infinitely loop.
+        if (condition == null) condition = new Expr.Literal(true);
+        body = new Stmt.While(condition, body);
+
+        // If there is an initializer, we need to execute it prior to the while
+        // loop to set any initial loop state.
+        // This statement then becomes a block containing the initializer and
+        // then the while loop.
+        if (initializer != null) {
+            body = new Stmt.Block(Arrays.asList(initializer, body));
+        }
+
+        return body;
     }
 
     /**
