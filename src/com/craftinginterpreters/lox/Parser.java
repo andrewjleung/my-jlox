@@ -18,7 +18,9 @@ import static com.craftinginterpreters.lox.TokenType.*;
  * statement      → exprStmt
  *                | ifStmt
  *                | printStmt
+ *                | whileStmt
  *                | block ;
+ * whileStmt      → "while" "(" expression ")" statement ;
  * exprStmt       → expression ";" ;
  * ifStmt         → "if" "(" expression ")" statement
  *                ( "else" statement )? ;
@@ -130,6 +132,7 @@ class Parser {
     private Stmt statement() {
         if (match(IF)) return ifStatement();
         if (match(PRINT)) return printStatement();
+        if (match(WHILE)) return whileStatement();
         if (match(LEFT_BRACE)) return new Stmt.Block(block());
 
         return expressionStatement();
@@ -195,6 +198,24 @@ class Parser {
         // Consume the final semicolon.
         consume(SEMICOLON, "Expect ';' after variable declaration.");
         return new Stmt.Var(name, initializer);
+    }
+
+    /**
+     * Parse a single while statement AST from the current position in this
+     * Parser's list of tokens.
+     *
+     * @return the parsed while statement AST
+     */
+    private Stmt whileStatement() {
+        // Parse the condition expression.
+        consume(LEFT_PAREN, "Expect '(' after 'while'.");
+        Expr condition = expression();
+        consume(RIGHT_PAREN, "Expect ')' after condition.");
+
+        // Parse the body.
+        Stmt body = statement();
+
+        return new Stmt.While(condition, body);
     }
 
     /**
