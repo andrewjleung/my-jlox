@@ -44,7 +44,14 @@ class LoxFunction implements LoxCallable {
         // Tell the interpreter to execute the function's body with its
         // environment.
         // The environment will return to the callsite afterwards.
-        interpreter.executeBlock(declaration.body, environment);
+        // This is wrapped in a try/catch to catch and handle any return statements.
+        try {
+            interpreter.executeBlock(declaration.body, environment);
+        } catch (Return returnValue) {
+            // There was a return statement in the function.
+            // Return its value.
+            return returnValue.value;
+        }
 
         // No return values for now.
         return null;

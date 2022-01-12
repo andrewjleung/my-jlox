@@ -139,6 +139,17 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     }
 
     @Override
+    public Void visitReturnStmt(Stmt.Return stmt) {
+        // Evaluate our return value to be given to the Return exception.
+        Object value = null;
+        if (stmt.value != null) value = evaluate(stmt.value);
+
+        // Throw a `Return` exception to unwind the call stack back to the
+        // `LoxCallable` `call()` method which is invoking the current function.
+        throw new Return(value);
+    }
+
+    @Override
     public Void visitVarStmt(Stmt.Var stmt) {
         // Set the value of the variable if an initializer is present.
         Object value = null;

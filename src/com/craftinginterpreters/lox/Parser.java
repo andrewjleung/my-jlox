@@ -24,6 +24,7 @@ import static com.craftinginterpreters.lox.TokenType.*;
  *                | forStmt
  *                | ifStmt
  *                | printStmt
+ *                | returnStmt
  *                | whileStmt
  *                | block ;
  * exprStmt       → expression ";" ;
@@ -33,6 +34,7 @@ import static com.craftinginterpreters.lox.TokenType.*;
  * ifStmt         → "if" "(" expression ")" statement
  *                 ( "else" statement )? ;
  * printStmt      → "print" expression ";" ;
+ * returnStmt     → "return" expression? ";" ;
  * whileStmt      → "while" "(" expression ")" statement ;
  * block          → "{" declaration* "}" ;
  *
@@ -144,6 +146,7 @@ class Parser {
         if (match(FOR)) return forStatement();
         if (match(IF)) return ifStatement();
         if (match(PRINT)) return printStatement();
+        if (match(RETURN)) return returnStatement();
         if (match(WHILE)) return whileStatement();
         if (match(LEFT_BRACE)) return new Stmt.Block(block());
 
@@ -257,6 +260,31 @@ class Parser {
         // Consume the final semicolon of the statement.
         consume(SEMICOLON, "Expect ';' after value.");
         return new Stmt.Print(value);
+    }
+
+    /**
+     * Parse a single return statement AST from the current position in this
+     * Parser's list of tokens.
+     *
+     * @return the parsed return statement AST
+     */
+    private Stmt returnStatement() {
+        Token keyword = previous();
+
+        // The return value defaults to null for when no return expression
+        // is given.
+        Expr value = null;
+
+        // At this point, the `return` keyword has already been consumed.
+        // The return expression is optional however, so only parse an
+        // expression if the next token isn't a semicolon.
+        if (!check(SEMICOLON)) {
+            value = expression();
+        }
+
+        // Consume the final semicolon.
+        consume(SEMICOLON, "Expect ';' after return value.");
+        return new Stmt.Return(keyword, value);
     }
 
     /**
