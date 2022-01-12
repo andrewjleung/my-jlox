@@ -41,8 +41,9 @@ import static com.craftinginterpreters.lox.TokenType.*;
  * comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
  * term           → factor ( ( "-" | "+" ) factor )* ;
  * factor         → unary ( ( "/" | "*" ) unary )* ;
- * unary          → ( "!" | "-" ) unary
- *                | primary ;
+ * unary          → ( "!" | "-" ) unary | call ;
+ * call           → primary ( "(" arguments? ")" )* ;
+ * arguments      → expression ( "," expression )* ;
  * primary        → "true" | "false" | "nil"
  *                | NUMBER | STRING
  *                | "(" expression ")"
@@ -264,7 +265,8 @@ class Parser {
         // Consume the variable's name.
         Token name = consume(IDENTIFIER, "Expect variable name.");
 
-        // Set the variable's initializer if present.
+        // Set the variable'
+        // s initializer if present.
         Expr initializer = null;
         if (match(EQUAL)) {
             initializer = expression();
@@ -516,7 +518,58 @@ class Parser {
         }
 
         // If there is no unary operator, parse the next higher precedence expression.
-        return primary();
+        return call();
+    }
+
+    /**
+     * Finish a function call having already parsed the given callee
+     * expression and left paren.
+     *
+     * @param callee the callee expression
+     * @return the call expression
+     */
+    private Expr finishCall(Expr callee) {
+        List<Expr> arguments = new ArrayList<>();
+
+        // If there is no right paren yet, then there is an argument.
+        // So long as there are still commas found, parse arguments.
+        if (!check(RIGHT_PAREN)) {
+            do {
+                // Limit the number of arguments to 255.
+                if (arguments.size() >= 255) {
+                    error(peek(), "Can't have more than 255 arguments.");
+                }
+                arguments.add(expression());
+            } while (match(COMMA));
+        }
+
+        // Parse the right paren.
+        Token paren = consume(RIGHT_PAREN,
+                "Expect ')' after arguments.");
+
+        return new Expr.Call(callee, paren, arguments);
+    }
+
+    /**
+     * Parse a single call expression AST from the current position
+     * in this Parser's list of tokens.
+     *
+     * @return the parsed call expression AST
+     */
+    private Expr call() {
+        Expr expr = primary();
+
+        while (true) {
+            // Match an arbitrary amount of calls.
+            // Once there are no more, exit the loop.
+            if (match(LEFT_PAREN)) {
+                expr = finishCall(expr);
+            } else {
+                break;
+            }
+        }
+
+        return expr;
     }
 
     /**
