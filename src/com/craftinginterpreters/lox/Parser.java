@@ -53,6 +53,7 @@ import static com.craftinginterpreters.lox.TokenType.*;
  * TODO: add error productions to handle binary operators without a left operand,
  *       this should report the error and parse / discard the right operand with
  *       the appropriate precedence
+ * TODO: add support for `break` and `continue` statements in loops (https://craftinginterpreters.com/control-flow.html#challenges)
  *
  */
 class Parser {
@@ -144,6 +145,12 @@ class Parser {
         return expressionStatement();
     }
 
+    /**
+     * Parse a single for statement AST from the current position in
+     * this Parser's list of tokens.
+     *
+     * @return the parsed for statement AST
+     */
     private Stmt forStatement() {
         consume(LEFT_PAREN, "Expect '(' after 'for'.");
 
@@ -205,8 +212,10 @@ class Parser {
     }
 
     /**
+     * Parse a single if statement AST from the current position in this
+     * Parser's list of tokens.
      *
-     * @return
+     * @return the parsed if statement AST
      */
     private Stmt ifStatement() {
         // Parse the if-condition.
