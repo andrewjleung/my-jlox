@@ -12,8 +12,12 @@ import static com.craftinginterpreters.lox.TokenType.*;
  * This abides by the following grammar:
  * program        → declaration* EOF ;
  *
- * declaration    → varDecl
+ * declaration    → funDecl
+ *                | varDecl
  *                | statement ;
+ * funDecl        → "fun" function ;
+ * function       → IDENTIFIER "(" parameters? ")" block ;
+ * parameters     → IDENTIFIER ( "," IDENTIFIER )* ;
  * varDecl        → "var" IDENTIFIER ( "=" expression )? ";" ;
  *
  * statement      → exprStmt
@@ -22,14 +26,14 @@ import static com.craftinginterpreters.lox.TokenType.*;
  *                | printStmt
  *                | whileStmt
  *                | block ;
+ * exprStmt       → expression ";" ;
  * forStmt        → "for" "(" ( varDecl | exprStmt | ";" )
  *                  expression? ";"
  *                  expression? ")" statement ;
- * whileStmt      → "while" "(" expression ")" statement ;
- * exprStmt       → expression ";" ;
  * ifStmt         → "if" "(" expression ")" statement
- *                ( "else" statement )? ;
+ *                 ( "else" statement )? ;
  * printStmt      → "print" expression ";" ;
+ * whileStmt      → "while" "(" expression ")" statement ;
  * block          → "{" declaration* "}" ;
  *
  * expression     → assignment ;
@@ -116,7 +120,7 @@ class Parser {
      */
     private Stmt declaration() {
         try {
-            // If the `var` keyword is present, parse a variable declaratio.
+            if (match(FUN)) return function("function");
             if (match(VAR)) return varDeclaration();
 
             // Otherwise, parse a statement.
@@ -311,8 +315,51 @@ class Parser {
     }
 
     /**
+     * Parse a single function statement AST from the current position in
+     * this Parser's list of tokens.
+     *
+     * @param kind what type of function this is (function | method)
+     * @return the parsed function statement AST
+     */
+    private Stmt.Function function(String kind) {
+        // The "fun" keyword has already been parsed.
+        // Parse the function's identifier.
+        Token name = consume(IDENTIFIER, "Expect " + kind + " name.");
+
+        // Parse the left paren.
+        consume(LEFT_PAREN, "Expect '(' after " + kind + " name.");
+
+        // Parse the function's parameters.
+        List<Token> parameters = new ArrayList<>();
+        if (!check(RIGHT_PAREN)) {
+            do {
+                // Enforce a limit of 255 function parameters.
+                if (parameters.size() >= 255) {
+                    error(peek(), "Can't have more than 255 parameters.");
+                }
+
+                // Parse the next parameter name.
+                parameters.add(
+                        consume(IDENTIFIER, "Expect parameter name."));
+            } while (match(COMMA));
+        }
+
+        // Parse the right paren.
+        consume(RIGHT_PAREN, "Expect ')' after parameters.");
+
+        // Parse the left brace.
+        consume(LEFT_BRACE, "Expect '{' before " + kind + " body.");
+
+        // Parse the function's body block.
+        List<Stmt> body = block();
+        return new Stmt.Function(name, parameters, body);
+    }
+
+    /**
      * Parse a list of statements from a block starting from the current
      * position in this Parser's list of tokens.
+     *
+     * At this point, the left brace has already been consumed.
      *
      * @return the list of Stmts within the block
      */

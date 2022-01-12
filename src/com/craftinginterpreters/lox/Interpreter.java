@@ -111,6 +111,17 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     }
 
     @Override
+    public Void visitFunctionStmt(Stmt.Function stmt) {
+        // Create a callable `LoxFunction` from the Function node.
+        LoxFunction function = new LoxFunction(stmt);
+
+        // Bind the function's name to its callable representation
+        // in the current environment.
+        environment.define(stmt.name.lexeme, function);
+        return null;
+    }
+
+    @Override
     public Void visitIfStmt(Stmt.If stmt) {
         if (isTruthy(evaluate(stmt.condition))) {
             execute(stmt.thenBranch);
