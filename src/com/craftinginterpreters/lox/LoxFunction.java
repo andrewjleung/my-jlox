@@ -2,13 +2,22 @@ package com.craftinginterpreters.lox;
 
 import java.util.List;
 
+// TODO: support anonymous functions
+//       https://craftinginterpreters.com/functions.html#challenges
 class LoxFunction implements LoxCallable {
+    /**
+     * The environment closing over the environment surrounding
+     * the declaration of this function.
+     */
+    private final Environment closure;
+
     /**
      * The parsed `Function` node representing this function.
      */
     private final Stmt.Function declaration;
 
-    LoxFunction(Stmt.Function declaration) {
+    LoxFunction(Stmt.Function declaration, Environment closure) {
+        this.closure = closure;
         this.declaration = declaration;
     }
 
@@ -26,10 +35,9 @@ class LoxFunction implements LoxCallable {
     public Object call(Interpreter interpreter,
                        List<Object> arguments) {
         // Create this function's environment.
-        // When executing, beyond its own arguments, the function only
-        // has access to the global environment.
-        // This is regardless of whatever scope it's being called in.
-        Environment environment = new Environment(interpreter.globals);
+        // Its environment should be built off of its closure so that it
+        // has access to the lexical scope at its declaration.
+        Environment environment = new Environment(closure);
 
         // Bind each of the given arguments to the function's parameters
         // within its environment.

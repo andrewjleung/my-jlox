@@ -113,7 +113,9 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     @Override
     public Void visitFunctionStmt(Stmt.Function stmt) {
         // Create a callable `LoxFunction` from the Function node.
-        LoxFunction function = new LoxFunction(stmt);
+        // This provides the function with the current environment as
+        // its closure.
+        LoxFunction function = new LoxFunction(stmt, environment);
 
         // Bind the function's name to its callable representation
         // in the current environment.
