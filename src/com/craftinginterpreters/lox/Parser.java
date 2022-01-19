@@ -60,8 +60,9 @@ import static com.craftinginterpreters.lox.TokenType.*;
  * TODO: add error productions to handle binary operators without a left operand,
  *       this should report the error and parse / discard the right operand with
  *       the appropriate precedence
- * TODO: add support for `break` and `continue` statements in loops (https://craftinginterpreters.com/control-flow.html#challenges)
- *
+ * TODO: add support for `break` and `continue` statements in loops, being sure
+ *       to validate they are within loops
+ *       (https://craftinginterpreters.com/control-flow.html#challenges)
  */
 class Parser {
     /**

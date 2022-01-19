@@ -1,8 +1,14 @@
 package com.craftinginterpreters.lox;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+// Note that this interpreter is tightly-coupled with and heavily
+// relies upon semantic analysis done by the Resolver class beforehand.
+// TODO: write assertions to enforce the contract this interpreter expects
+//       to be upheld by the resolver
 class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 
     /**
@@ -14,6 +20,16 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
      * This interpreter's current environment.
      */
     private Environment environment = globals;
+
+    /**
+     * A map from nodes to the depth of their declarations.
+     *
+     * These values are found and populated within this map via semantic
+     * analysis done within the `Resolver` class, and are used to maintain
+     * consistency when resolving variables at runtime adhering to Lox's
+     * principle of static scope.
+     */
+    private final Map<Expr, Integer> locals = new HashMap<>();
 
     Interpreter() {
         // Add the `clock` native function to the global environment.
@@ -64,6 +80,17 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
      */
     private void execute(Stmt stmt) {
         stmt.accept(this);
+    }
+
+    /**
+     * Resolve the given expression with the given depth of scope.
+     *
+     * @param expr the expression to resolve
+     * @param depth how many scopes there are between the current
+     *              scope and the scope where this variable is defined
+     */
+    void resolve(Expr expr, int depth) {
+        locals.put(expr, depth);
     }
 
     /**
@@ -178,8 +205,18 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         // Evaluate the assignment r-value.
         Object value = evaluate(expr.value);
 
-        // Assign it to a (hopefully) existing variable in the environment.
-        environment.assign(expr.name, value);
+        // Lookup the resolved depth for this variable within the locals map.
+        Integer distance = locals.get(expr);
+
+        if (distance != null) {
+            // Assign the variable at its location in the environment chain.
+            environment.assignAt(distance, expr.name, value);
+        } else {
+            // If there is no distance stored from semantic analysis,
+            // The variable must be either global or was not declared.
+            globals.assign(expr.name, value);
+        }
+
         return value;
     }
 
@@ -328,7 +365,29 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     @Override
     public Object visitVariableExpr(Expr.Variable expr) {
         // TODO: make it a runtime error to access an unassigned (nil) variable.
-        return environment.get(expr.name);
+        return lookUpVariable(expr.name, expr);
+    }
+
+    /**
+     * Lookup the given variable expression in the environment chain
+     * by traversing its declaration's resolved depth within the chain.
+     *
+     * @param name the variable expression's name
+     * @param expr the variable expression
+     * @return
+     */
+    private Object lookUpVariable(Token name, Expr expr) {
+        // Lookup the resolved depth for this variable within the locals map.
+        Integer distance = locals.get(expr);
+
+        if (distance != null) {
+            // Retrieve the variable's value from the environment.
+            return environment.getAt(distance, name.lexeme);
+        } else {
+            // If there is no distance stored from semantic analysis,
+            // The variable must be either global or was not declared.
+            return globals.get(name);
+        }
     }
 
     /**

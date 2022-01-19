@@ -87,4 +87,52 @@ class Environment {
     void define(String name, Object value) {
         values.put(name, value);
     }
+
+    /**
+     * Retrieve the given variable name from an environment which is
+     * a resolved distance away from the current environment back in the
+     * environment chain.
+     *
+     * @param distance the distance from the current environment where the
+     *                 variable declaration is located
+     * @param name the name of the variable being searched for
+     * @return the value of the variable
+     */
+    Object getAt(int distance, String name) {
+        return ancestor(distance).values.get(name);
+    }
+
+    /**
+     * Assign the given value to the given variable name at its location
+     * a given resolved distance away from the current environment back in
+     * in the environment chain.
+     *
+     * @param distance the distance from the current environment where the
+     *                 variable declaration is located
+     * @param name the name of the variable to be assigned
+     * @param value the value to assign to the variable
+     */
+    void assignAt(int distance, Token name, Object value) {
+        ancestor(distance).values.put(name.lexeme, value);
+    }
+
+
+    /**
+     * Retrieve the environment a given distance away from the current
+     * environment.
+     *
+     * @param distance the distance from the current environment of the
+     *                 desired ancestor to retrieve
+     * @return the ancestor environment specified
+     */
+    Environment ancestor(int distance) {
+        Environment environment = this;
+
+        // Walk environments up until the specified distance.
+        for (int i = 0; i < distance; i++) {
+            environment = environment.enclosing;
+        }
+
+        return environment;
+    }
 }
